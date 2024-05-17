@@ -7,7 +7,7 @@ using NewReservationApi.Enitities;
 using NewReservationApi.Services;
 using System.Security.Claims;
 
-
+//comment
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +18,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(Options =>
 {
     Options.UseSqlServer(builder.Configuration.GetConnectionString("Reservation"));
+
 });
 builder.Services.AddCors(options =>
 {
