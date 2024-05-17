@@ -30,16 +30,15 @@ const BlockEvents = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem('AccessToken');
-     
-  
+      const token = localStorage.getItem("AccessToken");
+
       try {
-        const response = await fetch('https://localhost:7189/reservations', {
+        const response = await fetch("https://localhost:7189/reservations", {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
-  
+
         if (response.ok) {
           const data = await response.json();
           const reservations = data.Reservations;
@@ -48,13 +47,13 @@ const BlockEvents = () => {
           const driverName = data.Drivers;
           setDriver(driverName);
         } else {
-          console.error('API request failed:', response.status);
+          console.error("API request failed:", response.status);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       }
     };
-  
+
     fetchData();
   }, []);
 
@@ -64,16 +63,16 @@ const BlockEvents = () => {
     console.log("dataDriver", dataDriver);
   }, [dataManager, dataReservations, dataDriver]);
 
-//   const data = extend([], blockData, null, true);
-  
-//   const DriverName = ({ dataDriver }) => {
-//     const driverData = dataDriver.map(driver => ({
-//       Text: driver.DriverName,
-//       Id: driver.Id,
-//       GroupId: driver.GroupId,
-//       Color: driver.Color,
-//     }));
-//   };
+  //   const data = extend([], blockData, null, true);
+
+  //   const DriverName = ({ dataDriver }) => {
+  //     const driverData = dataDriver.map(driver => ({
+  //       Text: driver.DriverName,
+  //       Id: driver.Id,
+  //       GroupId: driver.GroupId,
+  //       Color: driver.Color,
+  //     }));
+  //   };
   const eventRendered = args => {
     console.log(args.data);
     if (args.element.classList.contains("e-appointment")) {
@@ -161,7 +160,6 @@ const BlockEvents = () => {
     }
   }
 
-
   const fieldsData = {
     id: "Id", // Assuming the unique identifier field is named "Id" in the API response
     subject: { name: "CarType" },
@@ -172,7 +170,7 @@ const BlockEvents = () => {
     recurrenceRule: { name: "RecurrenceRule" },
   };
 
-//   const eventSettings = { dataSource: dataManager, format: fieldsData };
+  //   const eventSettings = { dataSource: dataManager, format: fieldsData };
   const getEmployeeName = value => {
     console.log("getEmployeeName", value);
     return value.resourceData[value.resource.textField];
