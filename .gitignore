@@ -1,2 +1,5 @@
-BackEnd/.vs/
-
+/BackEnd/NewReservationApi/bin/Debug/net8.0/*
+BackEnd/.vs/*
+BackEnd/NewReservationApi/bin/*
+BackEnd/NewReservationApi/obj/*
+FrontEnd/node_modules/.vite/deps/*

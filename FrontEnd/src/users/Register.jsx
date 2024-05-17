@@ -9,10 +9,9 @@ const RegistrationScreen = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     try {
-      const response = await axios.post("/register", {
-        username,
+      const response = await axios.post("https://localhost:7189/register", {
+        email: username,
         password,
-        name,
       });
       console.log(response);
       // Handle successful registration (e.g., show a success message, redirect to login)
