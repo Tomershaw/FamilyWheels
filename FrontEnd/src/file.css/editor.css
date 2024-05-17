@@ -1,0 +1,20 @@
+.e-schedule-dialog .e-location-container{
+    display: none;
+  }
+  .e-subject-container{
+    display: none;
+  }
+  
+  .e-checkbox-wrapper-e-wrapper-e-time-zone-block-events{
+    display: none;
+  }
+
+
+  /* remove add title */
+    /* .e-subject{
+        display: none;
+    } */
+
+    .employee-category{
+    width: 10px;
+    }
