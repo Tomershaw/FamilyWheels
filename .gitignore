@@ -2,4 +2,5 @@
 BackEnd/.vs/*
 BackEnd/NewReservationApi/bin/*
 BackEnd/NewReservationApi/obj/*
-FrontEnd/node_modules/.vite/deps/*
+FrontEnd/node_modules/*
+/FrontEnd/node_modules/@syncfusion/ej2-schedule/src/schedule/models/event-settings-model.d.ts
