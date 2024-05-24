@@ -3,7 +3,7 @@
 public class ReservationDTO
 {
     public required string Id { get; set; }
-    public string Subject { get; set; } = "Not Available";
+    public string Description { get; set; } = "Not Available";
     public required string DriverId { get; set; } 
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }

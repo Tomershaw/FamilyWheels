@@ -8,7 +8,7 @@ namespace NewReservationApi.Enitities
         public string FamilyId { get; set; } = string.Empty;
         public string DriverId { get; set; } = string.Empty;
         public string CarId { get; set; } = string.Empty;
-        public string Subject { get; set; } = "Not Available";
+        public string Description { get; set; } = "Not Available";
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public bool IsAllDay { get; set; }

@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using NewReservationApi.Database;
 using NewReservationApi.DTOs;
 using NewReservationApi.Enitities;
+using NewReservationApi.Migrations;
 using NewReservationApi.Services;
 using System.Security.Claims;
 
@@ -90,6 +92,84 @@ var app = builder.Build();
 
 //    return Results.Ok("User registration successful");
 //});
+app.MapPost("/AddReservations", async (ClaimsPrincipal user, AddResevationDTO addResevationDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
+{
+    if (user.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+    // Get the current user
+    var currentUser = await userManager.GetUserAsync(user);
+    if (currentUser == null)
+    {
+        return Results.BadRequest("User not found");
+    }
+    var car = await context.Cars
+                             .Where(x => x.Name == addResevationDTO.CarType&& x.FamilyId==currentUser!.FamilyId)
+                             .FirstOrDefaultAsync();
+    if (car == null)
+    {
+        return Results.BadRequest("car not found");
+    }
+
+    var family = await context.Families
+    .Where(x => x.Id == currentUser!.FamilyId)
+    .FirstOrDefaultAsync();
+
+
+    // Create a new reservation
+    var newReservation = new Reservation()
+    {
+        Car = car,
+        StartTime = addResevationDTO.StartTime,
+        EndTime = addResevationDTO.EndTime,
+        IsAllDay = addResevationDTO.IsAllDay,
+        RecurrenceRule = addResevationDTO.RecurrenceRule ?? string.Empty, // Provide default value if null
+        Description = addResevationDTO.Description,
+        Driver = currentUser,
+        Family = family!,
+    };
+    //var generalDTO = new GeneralDTO();
+    //generalDTO.Reservations.Add(reservation);
+    context.Reservations.Add(newReservation);
+    await context.SaveChangesAsync();
+
+    // Return a success response
+    return Results.Ok(new { message = "Reservation added successfully" });
+});
+
+app.MapDelete("/Deletereservation", async (ClaimsPrincipal user,[FromBody] ReservationIdDTO reservationIdDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
+{
+
+if (user.Identity?.IsAuthenticated != true)
+{
+return Results.Unauthorized();
+}
+
+
+var userId = userManager.GetUserId(user);
+
+
+var reservation = await context.Reservations
+    .FirstOrDefaultAsync(r => r.Id == reservationIdDTO.Id);
+
+if (reservation == null)
+{
+return Results.NotFound("Reservation not found.");
+}
+
+    // Check if the reservation belongs to the authenticated user
+    if (reservation.DriverId != userId)
+    {
+        return Results.BadRequest("User not found");
+    }
+
+    // Delete the reservation
+    context.Reservations.Remove(reservation);
+await context.SaveChangesAsync();
+
+return Results.Ok("Reservation deleted successfully.");
+});
 
 
 app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext context, UserManager<Driver> userManager) =>
@@ -113,13 +193,12 @@ app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext co
         IsBlock = x.IsBlock,
         RecurrenceRule = x.RecurrenceRule,
         StartTime = x.StartTime,
-        Subject = x.Subject
+        Description = x.Description
     });
 
     var generalDTO = new GeneralDTO();
     generalDTO.Reservations.AddRange(reservationsDto);
 
-    var currentUserDriver = await userManager.GetUserAsync(user);
     var userFamilyIdDriver = currentUser!.FamilyId; // Assuming FamilyId is the property of currentUser that contains the FamilyId
 
     var driversInSameFamily = await context.Drivers
@@ -142,6 +221,9 @@ app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext co
         CarName = x.Name,
     });
     generalDTO.Cars.AddRange(CarDto);
+    
+    generalDTO.CurrentUserId = currentUser.Id;
+
     return generalDTO;
 })
 
