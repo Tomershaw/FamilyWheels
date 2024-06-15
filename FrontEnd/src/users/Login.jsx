@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const LoginScreen = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async e => {
     e.preventDefault();
 
     try {
-      
       const response = await axios.post("https://localhost:7189/login", {
         email: username,
         password,
@@ -19,12 +21,81 @@ const LoginScreen = () => {
       console.log(response.data);
       const token = response.data.AccessToken;
       localStorage.setItem("AccessToken", token);
-      window.location.href = "/calendar"; // Redirect to the calendar page
+      const fetchFullName = async () => {
+        const token = localStorage.getItem("AccessToken");
+        try {
+          const response = await axios.get(
+            "https://localhost:7189/GetFullname",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.status === 200) {
+            const data = response.data;
+            console.log("response", response);
+            console.log("data", data);
+            if (data.Fullname) {
+              console.log("Redirecting to /calendar");
+              navigate("/calendar");
+            }else{
+              navigate("/UserName");
+            }
+          } else {
+            console.error("API request failed:", response.status);
+            navigate("/login");
+          }
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          navigate("/");
+        }
+      };
+
+      fetchFullName();
+      // window.location.href = "/calendar"; // Redirect to the calendar page
     } catch (error) {
       console.log(error);
       setError("Invalid username or password");
     }
   };
+  // useEffect(() => {
+  //   console.log("location.pathname",location.pathname )
+  //   if (location.pathname === "/UserName") {
+  //     const fetchFullName = async () => {
+  //       const token = localStorage.getItem("AccessToken");
+  //       try {
+  //         const response = await axios.get(
+  //           "https://localhost:7189/GetFullname",
+  //           {
+  //             headers: {
+  //               Authorization: `Bearer ${token}`,
+  //             },
+  //           }
+  //         );
+
+  //         if (response.status === 200) {
+  //           const data = response.data;
+  //           console.log("response", response);
+  //           console.log("data", data);
+  //           if (data.Fullname) {
+  //             console.log("Redirecting to /calendar");
+  //             navigate("/calendar");
+  //           }
+  //         } else {
+  //           console.error("API request failed:", response.status);
+  //           navigate("/login");
+  //         }
+  //       } catch (error) {
+  //         console.error("Error fetching data:", error);
+  //         navigate("/");
+  //       }
+  //     };
+
+  //     fetchFullName();
+  //   }
+  // }, [location, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

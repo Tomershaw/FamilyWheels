@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,7 @@ builder.Services.AddIdentityCore<Driver>()
     .AddApiEndpoints();
 
 builder.Services.AddAuthentication()
+    
    .AddBearerToken(IdentityConstants.BearerScheme);
 builder.Services.AddAuthorizationBuilder();
 
@@ -57,7 +59,7 @@ builder.Services.AddSwaggerGen(opt =>
         In = ParameterLocation.Header,
         Description = "Please enter token",
         Name = "Authorization",
-        Type = SecuritySchemeType.Http, 
+        Type = SecuritySchemeType.Http,
         BearerFormat = "JWT",
         Scheme = "bearer"
     });
@@ -91,10 +93,83 @@ var app = builder.Build();
 //    }
 
 //    return Results.Ok("User registration successful");
+
+app.MapGet("/GetFullname", async (ClaimsPrincipal user, UserManager<Driver> userManager) =>
+{
+    if (user.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+
+    var userId = userManager.GetUserId(user);
+    var driver = await userManager.FindByIdAsync(userId!);
+
+    if (driver == null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new { Fullname = driver.Fullname });
+});
+
+app.MapPost("/AddfullName", async (ClaimsPrincipal user, [FromBody] FullnameDriverDTO FullnameDriverDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
+{
+    if (user.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+
+    var userId = userManager.GetUserId(user);
+    var driver = await userManager.FindByIdAsync(userId!);
+
+    if (driver == null)
+    {
+        return Results.NotFound();
+    }
+    driver.PhoneNumber = FullnameDriverDTO.PhoneNumber;
+    driver.Fullname = FullnameDriverDTO.Fullname;
+
+
+    await context.SaveChangesAsync();
+
+
+    return Results.Ok();
+});
+
+
+app.MapPut("/ChangeReservations" , async (ClaimsPrincipal user, [FromBody] UpdateReservationDTO UpdatereservationDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
+{
+    if (user.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+
+    var userId = userManager.GetUserId(user);
+    var reservation = await context.Reservations
+        .FirstOrDefaultAsync(r => r.Id == UpdatereservationDTO.Id);
+
+    if (reservation == null)
+    {
+        return Results.NotFound("Reservation not found.");
+    }
+
+    if (reservation.DriverId != userId)
+    {
+        return Results.BadRequest("User not found");
+    }
+
+    // Replace the existing reservation with the new one
+    context.Entry(reservation).CurrentValues.SetValues(UpdatereservationDTO);
+
+    // Save the changes to the database
+    await context.SaveChangesAsync();
+
+    return Results.Ok(reservation);
+});
 //});
 app.MapPost("/AddReservations", async (ClaimsPrincipal user, AddResevationDTO addResevationDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
 {
-    if (user.Identity?.IsAuthenticated != true)
+        if (user.Identity?.IsAuthenticated != true)
     {
         return Results.Unauthorized();
     }
@@ -105,7 +180,7 @@ app.MapPost("/AddReservations", async (ClaimsPrincipal user, AddResevationDTO ad
         return Results.BadRequest("User not found");
     }
     var car = await context.Cars
-                             .Where(x => x.Name == addResevationDTO.CarType&& x.FamilyId==currentUser!.FamilyId)
+                             .Where(x => x.Name == addResevationDTO.CarType && x.FamilyId == currentUser!.FamilyId)
                              .FirstOrDefaultAsync();
     if (car == null)
     {
@@ -120,6 +195,7 @@ app.MapPost("/AddReservations", async (ClaimsPrincipal user, AddResevationDTO ad
     // Create a new reservation
     var newReservation = new Reservation()
     {
+        Id = addResevationDTO.Id,
         Car = car,
         StartTime = addResevationDTO.StartTime,
         EndTime = addResevationDTO.EndTime,
@@ -135,28 +211,28 @@ app.MapPost("/AddReservations", async (ClaimsPrincipal user, AddResevationDTO ad
     await context.SaveChangesAsync();
 
     // Return a success response
-    return Results.Ok(new { message = "Reservation added successfully" });
+    return Results.Ok(new { message = "Reservation added successfully", newReservation.Id });
 });
 
-app.MapDelete("/Deletereservation", async (ClaimsPrincipal user,[FromBody] ReservationIdDTO reservationIdDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
+app.MapDelete("/Deletereservation", async (ClaimsPrincipal user, [FromBody] ReservationIdDTO reservationIdDTO, ApplicationDbContext context, UserManager<Driver> userManager) =>
 {
 
-if (user.Identity?.IsAuthenticated != true)
-{
-return Results.Unauthorized();
-}
+    if (user.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
 
 
-var userId = userManager.GetUserId(user);
+    var userId = userManager.GetUserId(user);
 
 
-var reservation = await context.Reservations
-    .FirstOrDefaultAsync(r => r.Id == reservationIdDTO.Id);
+    var reservation = await context.Reservations
+        .FirstOrDefaultAsync(r => r.Id == reservationIdDTO.Id);
 
-if (reservation == null)
-{
-return Results.NotFound("Reservation not found.");
-}
+    if (reservation == null)
+    {
+        return Results.NotFound("Reservation not found.");
+    }
 
     // Check if the reservation belongs to the authenticated user
     if (reservation.DriverId != userId)
@@ -166,15 +242,19 @@ return Results.NotFound("Reservation not found.");
 
     // Delete the reservation
     context.Reservations.Remove(reservation);
-await context.SaveChangesAsync();
+    await context.SaveChangesAsync();
 
-return Results.Ok("Reservation deleted successfully.");
+    return Results.Ok("Reservation deleted successfully.");
 });
 
 
 app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext context, UserManager<Driver> userManager) =>
 {
+
+
     var currentUser = await userManager.GetUserAsync(user);
+
+
     var userFamilyId = currentUser!.FamilyId;
 
     var reservations = await context.Reservations
@@ -182,6 +262,7 @@ app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext co
         .Include(x => x.Driver)
         .Where(x => x.FamilyId == userFamilyId)
         .ToListAsync();
+
 
     var reservationsDto = reservations.Select(x => new ReservationDTO()
     {
@@ -208,6 +289,7 @@ app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext co
     var driverDto = driversInSameFamily.Select(x => new DriverDTO()
     {
         Id = x.Id,
+        Fullname = x.Fullname,
         DriverName = x.NormalizedUserName,
     });
 
@@ -221,12 +303,13 @@ app.MapGet("/reservations", async (ClaimsPrincipal user, ApplicationDbContext co
         CarName = x.Name,
     });
     generalDTO.Cars.AddRange(CarDto);
-    
+
     generalDTO.CurrentUserId = currentUser.Id;
 
     return generalDTO;
 })
 
+.RequireAuthorization()
 .WithName("GetReservations")
 .WithOpenApi();
 

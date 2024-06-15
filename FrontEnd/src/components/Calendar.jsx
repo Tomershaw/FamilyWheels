@@ -21,14 +21,7 @@ import "react-toastify/dist/ReactToastify.css"; // Import the CSS styles
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const toastConfig = {
-  position: "top-right", // Position (top-left, top-center, etc.)
-  autoClose: 5000, // Auto-close duration in milliseconds
-  hideProgressBar: false, // Show or hide progress bar
-  closeOnClick: true, // Close toast on click
-  pauseOnHover: true, // Pause animation on hover
-  draggable: true, // Allow dragging the toast
-};
+
 
 const BlockEvents = () => {
   const [dataManager, setDataManager] = useState([]);
@@ -36,6 +29,7 @@ const BlockEvents = () => {
   const [dataDriver, setDriver] = useState([]);
   const [dataCar, setCar] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [responsefromPost, setresponsefromPost] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,9 +54,11 @@ const BlockEvents = () => {
           setCurrentUserId(data.CurrentUserId);
         } else {
           console.error("API request failed:", response.status);
+          window.location.href = "/login";
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+        window.location.href = "/";
       }
     };
 
@@ -76,7 +72,7 @@ const BlockEvents = () => {
     console.log("currentUserId", currentUserId);
   }, [dataManager, dataDriver, dataCar, currentUserId]);
 
-  const handlePostReservation = async reservationData => {
+  const handlePostReservation = async (reservationData, args) => {
     try {
       const token = localStorage.getItem("AccessToken");
       const response = await fetch("https://localhost:7189/Addreservations", {
@@ -87,10 +83,23 @@ const BlockEvents = () => {
         },
         body: JSON.stringify(reservationData),
       });
-
+  
       if (response.ok) {
         const data = await response.json();
+        console.log("dataManagertomer", dataManager);
+  
+        // Save the id to localStorage
+        // localStorage.setItem("reservationId", data.Id);
+  
+        // dataManager[dataManager.length - 1].Id = data.Id;
+        // reservationData = data.Id
+        // console.log("dataManagerLast", dataManager[dataManager.length - 1]);
+  
+        console.log("data.id ", data.Id);
+        console.log("reservationData.Id", reservationData.Id);
         console.log("Reservation saved:", data);
+  
+        
         // Perform any additional actions after successful save
       } else {
         console.error("API request failed:", response.status);
@@ -99,6 +108,7 @@ const BlockEvents = () => {
       console.error("Error saving reservation:", error);
     }
   };
+
   const handleDeleteReservation = async reservationId => {
     try {
       const token = localStorage.getItem("AccessToken");
@@ -125,6 +135,46 @@ const BlockEvents = () => {
     } catch (error) {
       console.error("Error deleting reservation:", error);
       toast.error("An error occurred while deleting the reservation.");
+    }
+  };
+
+  const handleUpdateReservation = async updatedReservationData => {
+    try {
+      const token = localStorage.getItem("AccessToken");
+      const response = await fetch(
+        "https://localhost:7189/ChangeReservations",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatedReservationData),
+        }
+      );
+      console.log("updatedReservationData", updatedReservationData);
+
+      console.log(response.ok);
+
+      if (response.ok) {
+        const data = await response.json();
+
+        console.log("Reservation updated:", data);
+        // console.log("data.Id updated:", data.Id);
+        toast.success("Reservation updated successfully.");
+      } else if (response.status === 403) {
+        console.error(
+          "You are not authorized to update this reservation.",
+          response
+        );
+        toast.error("You are not authorized to update this reservation.");
+      } else {
+        console.error("API request failed:", response.status);
+        toast.error("An error occurred while updating the reservation.");
+      }
+    } catch (error) {
+      console.error("Error updating reservation:", error);
+      toast.error("An error occurred while updating the reservation.");
     }
   };
 
@@ -181,32 +231,50 @@ const BlockEvents = () => {
   };
   const handleActionBegin = async args => {
     const eventData = args.data instanceof Array ? args.data[0] : args.data;
-
     console.log("Handling action begin:", args.requestType);
-
+    console.log("eventData", eventData);
+  
     if (
       args.requestType === "eventCreate" ||
-      args.requestType === "eventChanged" ||
+      args.requestType === "eventChange" ||
       args.requestType === "eventRemove"
     ) {
-      const reservationData = {
-        id: eventData.Id,
-        isAllDay: eventData.IsAllDay,
-        startTime: eventData.StartTime,
-        endTime: eventData.EndTime,
+      let reservationData = {
+        Id: eventData.Id,
+        IsAllDay: eventData.IsAllDay,
+        StartTime: eventData.StartTime,
+        EndTime: eventData.EndTime,
         CarType: eventData.CarType,
-        RecurrenceRule: eventData.RecurrenceRule,
+        RecurrenceRule:
+          eventData.RecurrenceRule === null ? "" : eventData.RecurrenceRule,
         Description: eventData.Description,
       };
-
+  
       console.log("Reservation data (create/change/delete):", reservationData);
-
+  
       if (args.requestType === "eventRemove") {
         await handleDeleteReservation(eventData.Id);
         console.log("Deleting reservation with data:", eventData.Id);
-      } else {
+      } else if (args.requestType === "eventCreate") {
         await handlePostReservation(reservationData);
-        console.log("Reservation data (create/change):", reservationData);
+        // Retrieve the saved id from localStorage
+        // const savedReservationId = localStorage.getItem("reservationId");
+  
+        // Populate the dataManager with the saved id
+        // if (savedReservationId) {
+        //   dataManager[dataManager.length - 1].Id = savedReservationId;
+        // }
+        console.log("Reservation data (create):", reservationData);
+        console.log("dataManager[dataManager.length - 1].Id",dataManager[dataManager.length - 1].Id)
+      } else {
+
+        await handleUpdateReservation(reservationData);
+        console.log("dataManager[dataManager.length - 1].Idtomertomer",dataManager[dataManager.length - 1].Id)
+        console.log(
+          "Reservation data (change):",
+          reservationData,
+        );
+       
       }
     }
   };
@@ -359,7 +427,7 @@ const BlockEvents = () => {
                   name="Driver"
                   allowMultiple={true}
                   dataSource={dataDriver.map(driver => ({
-                    Text: driver.DriverName,
+                    Text: driver.Fullname,
                     Id: driver.Id,
                     GroupId: driver.GroupId,
                     Color: driver.Color,
